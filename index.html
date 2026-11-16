@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cámara - Asistencia</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef3f9;
+      text-align: center;
+      padding: 20px;
+      color: #183b63;
+    }
+
+    .contenedor {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    video, img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 15px;
+    }
+
+    button {
+      background: #1769aa;
+      color: white;
+      border: none;
+      padding: 13px 20px;
+      margin: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    #vistaPrevia {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="contenedor">
+    <h2>Foto de asistencia</h2>
+    <p>Colócate frente a la cámara.</p>
+
+    <video id="video" autoplay playsinline></video>
+    <img id="vistaPrevia" alt="Foto capturada">
+
+    <div>
+      <button id="iniciar" onclick="iniciarCamara()">Abrir cámara</button>
+      <button id="tomar" onclick="tomarFoto()" style="display:none">
+        Tomar foto
+      </button>
+      <button id="repetir" onclick="repetirFoto()" style="display:none">
+        Repetir
+      </button>
+      <button id="confirmar" onclick="confirmarFoto()" style="display:none">
+        Confirmar foto
+      </button>
+    </div>
+
+    <p id="mensaje"></p>
+  </div>
+
+  <canvas id="canvas" style="display:none"></canvas>
+
+  <script>
+    let camara = null;
+    let foto = null;
+
+    async function iniciarCamara() {
+      try {
+        document.getElementById("mensaje").textContent =
+          "Solicitando permiso para usar la cámara...";
+
+        camara = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+
+        const video = document.getElementById("video");
+        video.srcObject = camara;
+
+        document.getElementById("iniciar").style.display = "none";
+        document.getElementById("tomar").style.display = "inline-block";
+        document.getElementById("mensaje").textContent = "";
+
+      } catch (error) {
+        document.getElementById("mensaje").textContent =
+          "No se pudo abrir la cámara. Revisa los permisos del navegador. " +
+          error.message;
+      }
+    }
+
+    function tomarFoto() {
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      canvas.getContext("2d").drawImage(video, 0, 0);
+
+      foto = canvas.toDataURL("image/jpeg", 0.8);
+
+      document.getElementById("vistaPrevia").src = foto;
+      document.getElementById("vistaPrevia").style.display = "block";
+      video.style.display = "none";
+
+      document.getElementById("tomar").style.display = "none";
+      document.getElementById("repetir").style.display = "inline-block";
+      document.getElementById("confirmar").style.display = "inline-block";
+    }
+
+    function repetirFoto() {
+      foto = null;
+
+      document.getElementById("vistaPrevia").style.display = "none";
+      document.getElementById("video").style.display = "block";
+
+      document.getElementById("repetir").style.display = "none";
+      document.getElementById("confirmar").style.display = "none";
+      document.getElementById("tomar").style.display = "inline-block";
+    }
+
+    function confirmarFoto() {
+      if (!foto || !window.opener) {
+        document.getElementById("mensaje").textContent =
+          "No se pudo conectar con la aplicación de asistencia.";
+        return;
+      }
+
+      window.opener.postMessage({
+        tipo: "FOTO_ASISTENCIA",
+        foto: foto
+      }, "*");
+
+      detenerCamara();
+      window.close();
+    }
+
+    function detenerCamara() {
+      if (camara) {
+        camara.getTracks().forEach(track => track.stop());
+        camara = null;
+      }
+    }
+
+    window.addEventListener("beforeunload", detenerCamara);
+  </script>
+</body>
+</html>
