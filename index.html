@@ -92,6 +92,7 @@
 
         const video = document.getElementById("video");
         video.srcObject = camara;
+        video.style.transform = "scaleX(-1)";
 
         document.getElementById("iniciar").style.display = "none";
         document.getElementById("tomar").style.display = "inline-block";
