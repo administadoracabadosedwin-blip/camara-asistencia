@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -55,7 +56,7 @@
     <h2>Foto de asistencia</h2>
     <p>Colócate frente a la cámara.</p>
 
-    <video id="video" autoplay playsinline style="-webkit-transform: none; transform: none;"></video>
+    <video id="video" autoplay playsinline></video>
     <img id="vistaPrevia" alt="Foto capturada">
 
     <div>
@@ -82,36 +83,46 @@
 
     async function iniciarCamara() {
       try {
-        document.getElementById("mensaje").textContent =
-          "Solicitando permiso para usar la cámara...";
+        const mensaje = document.getElementById("mensaje");
+        const video = document.getElementById("video");
+
+        mensaje.textContent = "Solicitando permiso para usar la cámara...";
+
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Este navegador no permite acceder a la cámara.");
+        }
 
         const parametros = new URLSearchParams(window.location.search);
         const modoCamara = parametros.get("camara") || "environment";
-        
+
         camara = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: modoCamara },
           audio: false
         });
 
-        const video = document.getElementById("video");
         video.srcObject = camara;
-        const esDispositivoMovil =
-          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        
-        const invertirImagen = esDispositivoMovil
-          ? modoCamara === "user"
-          : true;
-        
-        video.style.transform = invertirImagen ? "scaleX(-1)" : "none";
+
+        await new Promise(function(resolve) {
+          if (video.readyState >= 1) {
+            resolve();
+          } else {
+            video.onloadedmetadata = resolve;
+          }
+        });
+
+        await video.play();
 
         document.getElementById("iniciar").style.display = "none";
         document.getElementById("tomar").style.display = "inline-block";
-        document.getElementById("mensaje").textContent = "";
+
+        mensaje.textContent = "Cámara lista. Puedes tomar la foto.";
 
       } catch (error) {
+        detenerCamara();
+
         document.getElementById("mensaje").textContent =
-          "No se pudo abrir la cámara. Revisa los permisos del navegador. " +
+          "No se pudo abrir la cámara. Revisa los permisos. " +
           error.message;
       }
     }
@@ -120,38 +131,54 @@
       const video = document.getElementById("video");
       const canvas = document.getElementById("canvas");
 
+      if (!video.videoWidth || !video.videoHeight) {
+        document.getElementById("mensaje").textContent =
+          "Espera un momento. La cámara todavía está iniciando.";
+        return;
+      }
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-        const contexto = canvas.getContext("2d");
-        
-        const parametros = new URLSearchParams(window.location.search);
-        const modoCamara = parametros.get("camara") || "environment";
-        
-        const esDispositivoMovil =
-          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        
-        const invertirImagen = esDispositivoMovil
-          ? modoCamara === "user"
-          : true;
-        
-        if (invertirImagen) {
-          contexto.translate(canvas.width, 0);
-          contexto.scale(-1, 1);
-        }
-        
-        contexto.drawImage(video, 0, 0);
+      const contexto = canvas.getContext("2d");
+
+      const parametros = new URLSearchParams(window.location.search);
+      const modoCamara = parametros.get("camara") || "environment";
+
+      const esDispositivoMovil =
+        /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      const invertirImagen = esDispositivoMovil
+        ? modoCamara === "user"
+        : true;
+
+      if (invertirImagen) {
+        contexto.translate(canvas.width, 0);
+        contexto.scale(-1, 1);
+      }
+
+      contexto.drawImage(video, 0, 0);
 
       foto = canvas.toDataURL("image/jpeg", 0.8);
 
+      if (!foto || foto.length < 1000) {
+        document.getElementById("mensaje").textContent =
+          "No se pudo capturar la fotografía. Intenta nuevamente.";
+        return;
+      }
+
       document.getElementById("vistaPrevia").src = foto;
       document.getElementById("vistaPrevia").style.display = "block";
+
       video.style.display = "none";
 
       document.getElementById("tomar").style.display = "none";
       document.getElementById("repetir").style.display = "inline-block";
       document.getElementById("confirmar").style.display = "inline-block";
+
+      document.getElementById("mensaje").textContent =
+        "Fotografía capturada. Revisa la imagen.";
     }
 
     function repetirFoto() {
@@ -163,30 +190,69 @@
       document.getElementById("repetir").style.display = "none";
       document.getElementById("confirmar").style.display = "none";
       document.getElementById("tomar").style.display = "inline-block";
+
+      document.getElementById("mensaje").textContent =
+        "Puedes tomar otra fotografía.";
     }
 
     function confirmarFoto() {
-      if (!foto || !window.opener) {
+      if (!foto) {
         document.getElementById("mensaje").textContent =
-          "No se pudo conectar con la aplicación de asistencia.";
+          "Primero debes tomar una fotografía.";
         return;
       }
 
-      window.opener.postMessage({
-        tipo: "FOTO_ASISTENCIA",
-        foto: foto
-      }, "*");
+      if (!window.opener || window.opener.closed) {
+        document.getElementById("mensaje").textContent =
+          "No se pudo conectar con la aplicación de asistencia. " +
+          "Regresa a la aplicación e inténtalo nuevamente.";
+        return;
+      }
 
-      detenerCamara();
-      window.close();
+      document.getElementById("confirmar").disabled = true;
+
+      try {
+        const origenPadre = document.referrer
+          ? new URL(document.referrer).origin
+          : "*";
+
+        window.opener.postMessage({
+          tipo: "FOTO_ASISTENCIA",
+          foto: foto
+        }, origenPadre);
+
+        document.getElementById("mensaje").textContent =
+          "Fotografía enviada a la aplicación. Puedes regresar a ella.";
+
+        detenerCamara();
+
+        setTimeout(function() {
+          window.close();
+        }, 500);
+
+      } catch (error) {
+        document.getElementById("confirmar").disabled = false;
+
+        document.getElementById("mensaje").textContent =
+          "No se pudo enviar la fotografía. Intenta nuevamente.";
+      }
     }
 
     function detenerCamara() {
       if (camara) {
-        camara.getTracks().forEach(track => track.stop());
+        camara.getTracks().forEach(function(pista) {
+          pista.stop();
+        });
+
         camara = null;
       }
     }
+
+    window.addEventListener("beforeunload", detenerCamara);
+  </script>
+</body>
+</html>
+
 
     window.addEventListener("beforeunload", detenerCamara);
   </script>
