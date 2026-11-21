@@ -212,15 +212,11 @@
       document.getElementById("confirmar").disabled = true;
 
       try {
-        const origenPadre = document.referrer
-          ? new URL(document.referrer).origin
-          : "*";
-
         window.opener.postMessage({
           tipo: "FOTO_ASISTENCIA",
           foto: foto
-        }, origenPadre);
-
+        }, "*");
+        
         document.getElementById("mensaje").textContent =
           "Fotografía enviada a la aplicación. Puedes regresar a ella.";
 
@@ -250,12 +246,5 @@
 
     window.addEventListener("beforeunload", detenerCamara);
   </script>
-</body>
-</html>
-
-
-    window.addEventListener("beforeunload", detenerCamara);
-  </script>
-  <!-- Actualizacion de publicacion -->
 </body>
 </html>
