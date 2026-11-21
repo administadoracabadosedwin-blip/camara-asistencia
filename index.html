@@ -85,14 +85,17 @@
         document.getElementById("mensaje").textContent =
           "Solicitando permiso para usar la cámara...";
 
+        const parametros = new URLSearchParams(window.location.search);
+        const modoCamara = parametros.get("camara") || "environment";
+        
         camara = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
+          video: { facingMode: modoCamara },
           audio: false
         });
 
         const video = document.getElementById("video");
         video.srcObject = camara;
-        video.style.transform = "scaleX(-1)";
+        video.style.transform = "none";
 
         document.getElementById("iniciar").style.display = "none";
         document.getElementById("tomar").style.display = "inline-block";
@@ -113,8 +116,6 @@
       canvas.height = video.videoHeight;
 
       const contexto = canvas.getContext("2d");
-      contexto.translate(canvas.width, 0);
-      contexto.scale(-1, 1);
       contexto.drawImage(video, 0, 0);
 
       foto = canvas.toDataURL("image/jpeg", 0.8);
