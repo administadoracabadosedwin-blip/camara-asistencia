@@ -95,7 +95,7 @@
 
         const video = document.getElementById("video");
         video.srcObject = camara;
-        video.style.transform = "none";
+        video.style.transform = "scaleX(-1)";
 
         document.getElementById("iniciar").style.display = "none";
         document.getElementById("tomar").style.display = "inline-block";
@@ -115,8 +115,10 @@
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
-      const contexto = canvas.getContext("2d");
-      contexto.drawImage(video, 0, 0);
+     const contexto = canvas.getContext("2d");
+    contexto.translate(canvas.width, 0);
+    contexto.scale(-1, 1);
+    contexto.drawImage(video, 0, 0);
 
       foto = canvas.toDataURL("image/jpeg", 0.8);
 
