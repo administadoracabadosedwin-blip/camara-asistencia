@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -29,9 +27,14 @@
       border-radius: 12px;
       margin-top: 15px;
     }
-        #vistaPrevia {
-          transform: none;
-        }
+    
+    #video {
+      transform: none !important;
+    }
+    
+    #vistaPrevia {
+      transform: none;
+    }
 
     button {
       background: #1769aa;
@@ -89,7 +92,6 @@
         const mensaje = document.getElementById("mensaje");
         const video = document.getElementById("video");
 
-        mensaje.textContent = "Solicitando permiso para usar la cámara...";
 
         if (!navigator.mediaDevices ||
             !navigator.mediaDevices.getUserMedia) {
@@ -104,7 +106,9 @@
           audio: false
         });
 
-        video.srcObject = camara;
+          video.srcObject = camara;
+          video.style.transform = "scaleX(1)";
+          video.style.webkitTransform = "scaleX(1)";
 
         await new Promise(function(resolve) {
           if (video.readyState >= 1) {
@@ -119,14 +123,14 @@
         document.getElementById("iniciar").style.display = "none";
         document.getElementById("tomar").style.display = "inline-block";
 
-      } catch (error) {
-        detenerCamara();
-
-        document.getElementById("mensaje").textContent =
-          "No se pudo abrir la cámara. Revisa los permisos. " +
-          error.message;
-      }
-    }
+                      } catch (error) {
+              detenerCamara();
+      
+              document.getElementById("mensaje").textContent =
+                "No se pudo abrir la cámara. Revisa los permisos. " +
+                error.message;
+            }
+          }
 
           function tomarFoto() {
             const video = document.getElementById("video");
@@ -177,9 +181,7 @@
             document.getElementById("tomar").style.display = "none";
             document.getElementById("repetir").style.display = "inline-block";
             document.getElementById("confirmar").style.display = "inline-block";
-          
-            document.getElementById("mensaje").textContent =
-              "Fotografía capturada. Revisa la imagen.";
+        
           }
 
 
