@@ -28,10 +28,11 @@
       margin-top: 15px;
     }
     
-    #video {
-      transform: none !important;
-    }
-    
+      #video {
+        transform: scaleX(-1) !important;
+        -webkit-transform: scaleX(-1) !important;
+      }
+          
     #vistaPrevia {
       transform: none;
     }
@@ -107,8 +108,9 @@
         });
 
           video.srcObject = camara;
-          video.style.transform = "scaleX(1)";
-          video.style.webkitTransform = "scaleX(1)";
+          
+          video.style.setProperty("transform", "scaleX(-1)", "important");
+          video.style.setProperty("-webkit-transform", "scaleX(-1)", "important");
 
         await new Promise(function(resolve) {
           if (video.readyState >= 1) {
